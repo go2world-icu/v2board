@@ -181,7 +181,12 @@ class PreferredNodeService
         $curl->setConnectTimeout(5);
         $curl->get($url);
         $status = $curl->getHttpStatusCode();
-        $body = $curl->response;
+        // 用 rawResponse 拿原始字符串：$curl->response 对 JSON 响应会解码成 stdClass，
+        // 导致 !is_string($body) 判断失败；rawResponse 才是原始 body。
+        $body = isset($curl->rawResponse) ? $curl->rawResponse : $curl->response;
+        if (!is_string($body)) {
+            $body = is_object($body) || is_array($body) ? json_encode($body) : (string)$body;
+        }
         $curl->close();
 
         if ($status === 0 || $status >= 400 || !is_string($body)) {
