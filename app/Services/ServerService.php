@@ -230,7 +230,7 @@ class ServerService
         );
         $tmp = array_column($servers, 'sort');
         array_multisort($tmp, SORT_ASC, $servers);
-        return array_map(function ($server) {
+        $servers = array_map(function ($server) {
             if (strpos($server['port'], '-')) {
                 $server['mport'] = (string)$server['port'];
             } else {
@@ -240,6 +240,9 @@ class ServerService
             $server['cache_key'] = "{$server['type']}-{$server['id']}-{$server['updated_at']}-{$server['is_online']}";
             return $server;
         }, $servers);
+        // 对 tags 含"优选"的节点，展开为全局优选IP池的克隆节点（换地址，SNI/传输保留）
+        PreferredNodeService::expand($servers);
+        return $servers;
     }
 
     public function getAvailableUsers($groupId)

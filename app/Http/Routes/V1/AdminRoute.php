@@ -97,6 +97,11 @@ class AdminRoute
                 $router->post('update', 'V1\\Admin\\Server\\V2nodeController@update');
                 $router->post('copy', 'V1\\Admin\\Server\\V2nodeController@copy');
             });
+            // Preferred IP
+            $router->get ('/preferred-ip/show', 'V1\\Admin\\PreferredNodeController@show');
+            $router->post('/preferred-ip/setUrl', 'V1\\Admin\\PreferredNodeController@setUrl');
+            $router->post('/preferred-ip/test', 'V1\\Admin\\PreferredNodeController@test');
+            $router->post('/preferred-ip/purge', 'V1\\Admin\\PreferredNodeController@purge');
             // Order
             $router->get ('/order/fetch', 'V1\\Admin\\OrderController@fetch');
             $router->post('/order/update', 'V1\\Admin\\OrderController@update');
