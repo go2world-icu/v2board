@@ -17,10 +17,11 @@ class PreferredNodeController extends Controller
         'v2node' => ServerV2node::class,
     ];
 
-    /** GET show：当前优选IP接口URL + 带"优选"标签的节点 */
+    /** GET show：当前优选IP接口URL + 每节点克隆数上限 + 带"优选"标签的节点 */
     public function show(Request $request)
     {
         $url = trim((string)config('v2board.preferred_ips_url', ''));
+        $maxPerNode = (int)config('v2board.preferred_ips_max_per_node', 0);
         $taggedNodes = [];
         foreach (self::MODELS as $type => $model) {
             $rows = $model::orderBy('sort', 'ASC')->get(['id', 'name', 'host', 'tags']);
@@ -38,22 +39,25 @@ class PreferredNodeController extends Controller
         }
         return response([
             'data' => [
-                'url'         => $url,
-                'taggedNodes' => $taggedNodes,
+                'url'          => $url,
+                'max_per_node' => $maxPerNode,
+                'taggedNodes'  => $taggedNodes,
             ]
         ]);
     }
 
-    /** POST setUrl：设置/清除全局优选IP接口URL（url 为空=清除） */
+    /** POST setUrl：设置/清除全局优选IP接口URL + 每节点克隆数上限（0=不限） */
     public function setUrl(Request $request)
     {
         $params = $request->validate([
-            'url' => 'nullable|string|max:500',
+            'url'          => 'nullable|string|max:500',
+            'max_per_node' => 'nullable|integer|min:0|max:500',
         ]);
         $url = trim($params['url'] ?? '');
         try {
             PreferredNodeService::updateConfig([
-                'preferred_ips_url' => $url,
+                'preferred_ips_url'            => $url,
+                'preferred_ips_max_per_node'   => isset($params['max_per_node']) ? (int)$params['max_per_node'] : (int)config('v2board.preferred_ips_max_per_node', 0),
             ]);
         } catch (\Throwable $e) {
             abort(500, '写配置失败：' . $e->getMessage());

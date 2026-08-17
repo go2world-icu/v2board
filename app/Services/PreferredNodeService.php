@@ -20,8 +20,15 @@ class PreferredNodeService
     /** 池缓存时长（秒），与 CFnew 15 分钟自动优选周期对齐 */
     const CACHE_TTL = 900;
 
-    /** 每个带标签节点最多展开的克隆数，避免订阅被刷爆 */
-    const MAX_PER_NODE = 10;
+    /**
+     * 每个带标签节点最多展开的克隆数（0=不限）。
+     * 可配：页面 / php artisan v2board:preferred-ip --max=N
+     */
+    private static function maxPerNode(): int
+    {
+        $max = (int)config('v2board.preferred_ips_max_per_node', 0);
+        return $max <= 0 ? PHP_INT_MAX : $max;
+    }
 
     /**
      * 展开：保留原节点，对 tags 含"优选"的节点追加 N 个换地址的克隆。
@@ -47,8 +54,9 @@ class PreferredNodeService
                 continue;
             }
             $idx = 0;
+            $max = self::maxPerNode();
             foreach ($pool as $entry) {
-                if ($idx >= self::MAX_PER_NODE) {
+                if ($idx >= $max) {
                     break;
                 }
                 $clone = $server; // 继承一切：SNI/WS-Host/tls_settings/rate/group/id…

@@ -61,6 +61,10 @@
     <div class="card">
         <h2>优选IP来源接口</h2>
         <input type="text" id="url" placeholder="https://xxx.workers.dev/xxx/api/preferred-ips 或任意 ip[:port][#名称] 列表URL" autocomplete="off">
+        <div class="form-row" style="margin-top:10px">
+            <span style="font-size:13px;color:#666;white-space:nowrap">每节点克隆数上限（0=不限）</span>
+            <input type="text" id="max_per_node" value="0" style="width:80px" autocomplete="off">
+        </div>
         <div class="form-row">
             <button class="btn btn-primary" id="btn-save" onclick="saveUrl()">保存</button>
             <button class="btn" id="btn-test" onclick="testUrl()">测试解析</button>
@@ -69,7 +73,8 @@
         </div>
         <div class="hint">
             支持两种返回格式：CFnew 的 <code>/api/preferred-ips</code> 返回 JSON <code>{"data":[{ip,port,name}]}</code>，或每行一个 <code>ip[:port][#名称]</code> 的纯文本列表。<br>
-            池按接口缓存 15 分钟；接口不可用时订阅自动回退为原节点（不影响订阅）。改完 URL 会自动清缓存。
+            池按接口缓存 15 分钟；接口不可用时订阅自动回退为原节点（不影响订阅）。改完 URL 会自动清缓存。<br>
+            克隆数上限默认 0（不限），池有多少就展开多少；订阅节点过多时可在这里设一个值（如 10）限制。
         </div>
     </div>
 
@@ -137,6 +142,7 @@
         try {
             const d = await api('/show');
             document.getElementById('url').value = d.url || '';
+            document.getElementById('max_per_node').value = d.max_per_node || 0;
             const tbody = document.getElementById('tbody');
             const nodes = d.taggedNodes || [];
             document.getElementById('tagged-count').textContent = '（' + nodes.length + ' 个）';
@@ -161,11 +167,13 @@
 
     async function saveUrl() {
         const url = document.getElementById('url').value.trim();
+        const max = parseInt(document.getElementById('max_per_node').value, 10);
+        const maxV = isNaN(max) || max < 0 ? 0 : max;
         const btn = document.getElementById('btn-save');
         btn.disabled = true;
         try {
-            await api('/setUrl', { method: 'POST', body: { url: url } });
-            toast(url ? '已保存优选IP接口' + (url ? '，缓存已清' : '') : '已清除优选IP接口', true);
+            await api('/setUrl', { method: 'POST', body: { url: url, max_per_node: maxV } });
+            toast(url ? '已保存优选IP接口（克隆上限 ' + maxV + '，缓存已清）' : '已清除优选IP接口', true);
         } catch (e) {
             toast('保存失败：' + e.message, false);
         } finally {

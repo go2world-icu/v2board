@@ -23,6 +23,7 @@ class PreferredIp extends Command
      */
     protected $signature = 'v2board:preferred-ip
         {--url= : 设置全局优选IP接口URL(留空=清除)}
+        {--max= : 每节点克隆数上限(0=不限)}
         {--show : 显示当前URL及带"优选"标签的节点}
         {--test= : 测试URL并输出可解析IP数}
         {--purge : 清空池缓存}';
@@ -41,7 +42,7 @@ class PreferredIp extends Command
      */
     public function handle()
     {
-        if ($this->option('url') !== null) {
+        if ($this->option('url') !== null || $this->option('max') !== null) {
             return $this->setUrl();
         }
         if ($testUrl = $this->option('test')) {
@@ -69,10 +70,17 @@ class PreferredIp extends Command
     protected function setUrl(): int
     {
         $url = trim((string)$this->option('url'));
+        $max = $this->option('max');
+        $patch = [];
+        if ($this->option('url') !== null) {
+            $patch['preferred_ips_url'] = $url;
+        }
+        if ($max !== null) {
+            $maxVal = (int)$max;
+            $patch['preferred_ips_max_per_node'] = $maxVal < 0 ? 0 : $maxVal;
+        }
         try {
-            PreferredNodeService::updateConfig([
-                'preferred_ips_url' => $url !== '' ? $url : '',
-            ]);
+            PreferredNodeService::updateConfig($patch);
         } catch (\Throwable $e) {
             $this->error('写配置失败：' . $e->getMessage());
             return 1;
@@ -80,15 +88,17 @@ class PreferredIp extends Command
         if ($url !== '') {
             PreferredNodeService::forget($url);
         }
-        $this->info($url !== '' ? "已设置优选IP接口URL：" . $url : '已清除优选IP接口URL');
+        $this->info('配置已更新' . (isset($patch['preferred_ips_url']) ? '（URL：' . ($url !== '' ? $url : '已清除') . '）' : '') . (isset($patch['preferred_ips_max_per_node']) ? '（克隆上限：' . $patch['preferred_ips_max_per_node'] . '）' : ''));
         return 0;
     }
 
     protected function show(): void
     {
         $url = trim((string)config('v2board.preferred_ips_url', ''));
+        $max = (int)config('v2board.preferred_ips_max_per_node', 0);
         $this->line('=== 优选IP配置 ===');
         $this->line('接口URL: ' . ($url !== '' ? $url : '（未设置）'));
+        $this->line('每节点克隆上限: ' . ($max > 0 ? $max : '不限(0)'));
         $this->line('');
         $this->line('=== 带"优选"标签的节点 ===');
         $total = 0;
