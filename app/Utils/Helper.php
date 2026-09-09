@@ -242,6 +242,7 @@ class Helper
             $tlsSettings = $server['tls_settings'] ?? $server['tlsSettings'] ?? [];
             $config['allowInsecure'] = (int)($tlsSettings['allow_insecure'] ?? $tlsSettings['allowInsecure'] ?? 0);
             $config['sni'] = $tlsSettings['server_name'] ?? $tlsSettings['serverName'] ?? '';
+            $config['pcs'] = $tlsSettings['pinned_peer_cert_sha256'] ?? '';
         }
         
         $network = (string)$server['network'];
@@ -306,6 +307,7 @@ class Helper
             "flow" => $server['flow'],
             "fp" => $tlsSettings['fingerprint'] ?? 'chrome',
             "insecure" => $tlsSettings['allow_insecure'] ?? 0,
+            "pcs" => $tlsSettings['pinned_peer_cert_sha256'] ?? '',
         ];
 
         if ($server['tls']) {
@@ -314,6 +316,13 @@ class Helper
             if ($server['tls'] == 2) {
                 $config['pbk'] = $tlsSettings['public_key'] ?? '';
                 $config['sid'] = $tlsSettings['short_id'] ?? '';
+            }
+        }
+        if (!empty($tlsSettings['ech'])) {
+            if ($tlsSettings['ech'] === 'cloudflare') {
+                $config['ech'] = 'cloudflare-ech.com+https://doh.pub/dns-query';
+            } elseif ($tlsSettings['ech'] === 'custom' && !empty($tlsSettings['ech_config'])) {
+                $config['ech'] = is_array($tlsSettings['ech_config']) ? $tlsSettings['ech_config'][0] : $tlsSettings['ech_config'];
             }
         }
         if (isset($server['encryption']) && $server['encryption'] == 'mlkem768x25519plus') {
@@ -338,6 +347,7 @@ class Helper
             'allowInsecure' => $server['allow_insecure'] ?? ($tlsSettings['allow_insecure'] ?? 0),
             'peer' => $server['server_name'] ?? ($tlsSettings['server_name'] ?? ''),
             'sni' => $server['server_name'] ?? ($tlsSettings['server_name'] ?? ''),
+            'pcs' => $tlsSettings['pinned_peer_cert_sha256'] ?? '',
             'type'=> $server['network'],
         ];
 
@@ -352,6 +362,13 @@ class Helper
                 if(isset($server['network_settings']['headers']['Host'])) {
                     $config['host'] = $server['network_settings']['headers']['Host'];
                 }
+            }
+        }
+        if (!empty($tlsSettings['ech'])) {
+            if ($tlsSettings['ech'] === 'cloudflare') {
+                $config['ech'] = 'cloudflare-ech.com+https://doh.pub/dns-query';
+            } elseif ($tlsSettings['ech'] === 'custom' && !empty($tlsSettings['ech_config'])) {
+                $config['ech'] = is_array($tlsSettings['ech_config']) ? $tlsSettings['ech_config'][0] : $tlsSettings['ech_config'];
             }
         }
         $query = http_build_query($config);
@@ -392,7 +409,8 @@ class Helper
         $tlsSettings = $server['tls_settings'] ?? [];
         $insecure = $tlsSettings['allow_insecure'] ?? 0;
         $sni = $tlsSettings['server_name'] ?? '';
-        $uri = "hysteria2://{$password}@{$remote}:{$firstPort}/?insecure={$insecure}&sni={$sni}";
+        $pcs = $tlsSettings['pinned_peer_cert_sha256'] ?? '';
+        $uri = "hysteria2://{$password}@{$remote}:{$firstPort}/?insecure={$insecure}&sni={$sni}&pcs={$pcs}";
 
         if (isset($server['obfs']) && isset($server['obfs_password'])) {
             $obfs_password = rawurlencode($server['obfs_password']);
@@ -414,6 +432,7 @@ class Helper
             'allow_insecure' => $server['insecure'] ?? ($tlsSettings['allow_insecure'] ?? 0),
             'disable_sni' => $server['disable_sni'],
             'udp_relay_mode' => $server['udp_relay_mode'],
+            'pcs' => $tlsSettings['pinned_peer_cert_sha256'] ?? '',
         ];
 
         $remote = self::formatHost($server['host']);
@@ -428,18 +447,72 @@ class Helper
     {
         $tlsSettings = $server['tls_settings'] ?? [];
         $config = [
+            'type' => $server['network'] ?? 'tcp',
             'insecure' => $server['insecure'] ?? ($tlsSettings['allow_insecure'] ?? 0),
+            'fp' => $tlsSettings['fingerprint'] ?? 'chrome',
+            'pcs' => $tlsSettings['pinned_peer_cert_sha256'] ?? '',
         ];
-        if (isset($server['server_name'])|| isset($tlsSettings['server_name'])) {
+        if (isset($server['server_name']) || isset($tlsSettings['server_name'])) {
             $config['sni'] = $server['server_name'] ?? ($tlsSettings['server_name'] ?? '');
         }
-
+        if (isset($server['tls']) && $server['tls'] == 2) {
+            $config['security'] = 'reality';
+            $config['pbk'] = $tlsSettings['public_key'] ?? '';
+            $config['sid'] = $tlsSettings['short_id'] ?? '';
+        }
         $remote = self::formatHost($server['host']);
         $port = $server['port'];
         $name = self::encodeURIComponent($server['name']);
-
+        if (isset($server['network']) && isset($server['network_settings'])) {
+            self::configureNetworkSettings($server, $config);
+        }
         $query = http_build_query($config);
         return "anytls://{$password}@{$remote}:{$port}/?{$query}#{$name}\r\n";
+    }
+
+    /**
+     * Generate ECH (Encrypted Client Hello) key pair for sing-box.
+     * Produces ech_key (MarshalECHKeys format, for server inbound)
+     * and ech_config (ECHConfigList, for client outbound).
+     *
+     * @param string $outerSni The cover/front domain for the outer ClientHello SNI (public_name).
+     *                         This is the FAKE domain visible to network observers.
+     *                         The real server_name is encrypted in the inner ClientHello.
+     */
+    public static function generateEchKeyPair($outerSni)
+    {
+        $privateKey = random_bytes(32);
+        $publicKey = sodium_crypto_scalarmult_base($privateKey);
+
+        $configId = random_int(0, 255);
+
+        // ECHConfig contents per draft-ietf-tls-esni
+        $configData = pack('C', $configId);              // config_id
+        $configData .= pack('n', 0x0020);                // kem_id: DHKEM(X25519, HKDF-SHA256)
+        $configData .= pack('n', 32) . $publicKey;       // public_key with length prefix
+        // cipher suites: {HKDF-SHA256, AES-128-GCM}, {HKDF-SHA256, AES-256-GCM}, {HKDF-SHA256, ChaCha20-Poly1305}
+        $suites = pack('nnnnnn', 0x0001, 0x0001, 0x0001, 0x0002, 0x0001, 0x0003);
+        $configData .= pack('n', strlen($suites)) . $suites;
+        $configData .= pack('C', 0);                     // maximum_name_length
+        $configData .= pack('C', strlen($outerSni)) . $outerSni; // public_name (cover domain, NOT real SNI)
+        $configData .= pack('n', 0);                     // extensions (empty)
+
+        // ECHConfig = version(0xfe0d) + length + data
+        $echConfig = pack('n', 0xfe0d) . pack('n', strlen($configData)) . $configData;
+
+        // ECHConfigList for client (no outer length prefix, per Go crypto/tls)
+        $echConfigList = $echConfig;
+
+        // MarshalECHKeys for server: length-prefixed configs + key entries
+        $echKeys = pack('n', strlen($echConfig)) . $echConfig;
+        $echKeys .= pack('n', 1);                        // num_keys = 1
+        $echKeys .= pack('C', $configId);                // config_id
+        $echKeys .= pack('n', 32) . $privateKey;         // private key with length prefix
+
+        return [
+            'ech_key' => base64_encode($echKeys),
+            'ech_config' => base64_encode($echConfigList),
+        ];
     }
 
     public static function configureNetworkSettings($server, &$config)
