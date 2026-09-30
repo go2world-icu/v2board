@@ -56,6 +56,11 @@ proxy-groups:
 rules:
   # 自定义规则
   ## 您可以在此处插入您补充的自定义规则（请注意保持缩进）
+  - DOMAIN-SUFFIX,smallpersimmon.com,DIRECT
+  - DOMAIN-SUFFIX,toworld.uk,DIRECT
+  - DOMAIN-SUFFIX,the-best-airfield.com,DIRECT
+  - DOMAIN-SUFFIX,the-best-chinaos.com,DIRECT
+  
   - IP-CIDR,1.1.1.1/32,$app_name,no-resolve
   - IP-CIDR,8.8.8.8/32,$app_name,no-resolve
   # Google 中国服务

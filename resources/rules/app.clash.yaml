@@ -19,6 +19,10 @@ proxy-groups:
 rules:
   # 自定义规则
   ## 您可以在此处插入您补充的自定义规则（请注意保持缩进）
+  - DOMAIN-SUFFIX,smallpersimmon.com,DIRECT
+  - DOMAIN-SUFFIX,toworld.uk,DIRECT
+  - DOMAIN-SUFFIX,the-best-airfield.com,DIRECT
+  - DOMAIN-SUFFIX,the-best-chinaos.com,DIRECT
 
   # Google 中国服务
   - DOMAIN-SUFFIX,services.googleapis.cn,SELECT
