@@ -73704,9 +73704,9 @@
                         this.setState({
                             visible: !0,
                             paymentMethods: e,
-                            selectPaymentMethod: this.state.submit.payment || e[0]
+                            selectPaymentMethod: this.state.selectPaymentMethod || this.state.submit.payment || e[0]
                         }, ()=>{
-                            this.onSelectPaymentMethod(this.state.submit.payment || e[0])
+                            this.onSelectPaymentMethod(this.state.selectPaymentMethod)
                         }
                         )
                     }
@@ -73830,18 +73830,30 @@
                         className: "form-group"
                     }, d.a.createElement("label", {
                         for: "example-text-input-alt"
-                    }, i[e].label), "input" === i[e].type && d.a.createElement(v["a"], {
+                    }, i[e].label), ("input" === i[e].type || "text" === i[e].type || "string" === i[e].type || !i[e].type) && d.a.createElement(v["a"], {
                         placeholder: i[e].description,
                         defaultValue: o[e] || i[e].value,
                         onChange: t=>this.configOnChange(e, t.target.value)
                     }))
                 }
-                ), "MGate" === r && d.a.createElement("div", {
+                ), r && r.includes("Paytaro") && d.a.createElement("div", {
                     className: "alert alert-warning mb-0",
                     role: "alert"
                 }, d.a.createElement("p", {
                     className: "mb-0"
-                }, "MGate TG@nulledsan")))))
+                }, "\u5ba2\u670dTG", d.a.createElement("a", {
+                    href: "https://t.me/paytaro",
+                    target: "_blank",
+                    rel: "noopener noreferrer"
+                }, "@paytaro"), d.a.createElement("br"), "\u673a\u5668\u4eba", d.a.createElement("a", {
+                    href: "https://t.me/paytarorobot",
+                    target: "_blank",
+                    rel: "noopener noreferrer"
+                }, "@paytarorobot"), d.a.createElement("br"), "\u5b98\u65b9\u7f51\u7ad9", d.a.createElement("a", {
+                    href: "https://v3.paytaro.com/#/docs",
+                    target: "_blank",
+                    rel: "noopener noreferrer"
+                }, "https://v3.paytaro.com"))))))
             }
         }
         var x = Object(m["c"])(e=>{
@@ -104695,6 +104707,8 @@
                 }, y.a.createElement(N["a"].Option, {
                     value: "self"
                 }, "\u81ea\u7b7e\u540d"), y.a.createElement(N["a"].Option, {
+                    value: "remote"
+                }, "\u81ea\u7b7e\u540d(\u9762\u677f\u4e0b\u53d1)"), y.a.createElement(N["a"].Option, {
                     value: "http"
                 }, "HTTP\u7533\u8bf7"), y.a.createElement(N["a"].Option, {
                     value: "dns"
@@ -104729,6 +104743,16 @@
                     value: e.key_file,
                     onChange: e=>this.change("key_file", e.target.value),
                     placeholder: "\u7559\u7a7a\u5728/etc/v2node/\u76ee\u5f55\u81ea\u52a8\u751f\u6210"
+                })), tls == 1 && e.cert_mode == "remote" && cert_apply && y.a.createElement("div", {
+                    className: "form-group"
+                }, y.a.createElement("label", null, "pinnedPeerCertSha256"), y.a.createElement(s["a"], {
+                    value: e.pinned_peer_cert_sha256,
+                    readOnly: true,
+                    style: {
+                        backgroundColor: "#f5f5f5a0",
+                        cursor: "text"
+                    },
+                    placeholder: "\u81ea\u52a8\u751f\u6210"
                 })), tls == 2 && y.a.createElement("div", {
                     className: "form-group"
                 }, y.a.createElement("label", null, "Server Address"), y.a.createElement(s["a"], {
@@ -104819,7 +104843,35 @@
                 }, y.a.createElement("label", null, "Allow Insecure"), y.a.createElement("div", null, y.a.createElement(f["a"], {
                     checked: parseInt(n),
                     onChange: e=>this.change("allow_insecure", e ? "1" : "0")
-                })))))
+                }))), y.a.createElement("div", {
+                    className: "form-group"
+                }, y.a.createElement("label", null, "ECH (Encrypted Client Hello)"), y.a.createElement(N["a"], {
+                    value: e.ech || "",
+                    style: { width: "100%" },
+                    onChange: e=>this.change("ech", e),
+                    placeholder: "\u9009\u62e9 ECH \u6a21\u5f0f"
+                }, y.a.createElement(N["a"].Option, { key: 0, value: "" }, "\u65e0"), y.a.createElement(N["a"].Option, { key: 1, value: "cloudflare" }, "Cloudflare"), y.a.createElement(N["a"].Option, { key: 2, value: "custom" }, "\u81ea\u5b9a\u4e49 SNI"))), e.ech === "cloudflare" && y.a.createElement("div", {
+                    className: "form-group",
+                    style: { background: "#f6ffed", padding: "8px 12px", borderRadius: "4px", border: "1px solid #b7eb8f" }
+                }, y.a.createElement("span", { style: { color: "#52c41a" } }, "\u2713 Cloudflare \u6258\u7ba1 ECH\uff0c\u5bc6\u94a5\u7531 Cloudflare \u81ea\u52a8\u7ba1\u7406\uff0c\u5ba2\u6237\u7aef\u4ece DNS \u81ea\u52a8\u83b7\u53d6\u914d\u7f6e\uff0c\u670d\u52a1\u7aef\u65e0\u9700\u914d\u7f6e")), e.ech === "custom" && y.a.createElement("div", {
+                    className: "form-group"
+                }, y.a.createElement("label", null, "ECH Server Name (\u4f2a\u88c5\u57df\u540d/\u5916\u5c42SNI)"), y.a.createElement(s["a"], {
+                    value: e.ech_server_name || "",
+                    onChange: e=>this.change("ech_server_name", e.target.value),
+                    placeholder: "\u5fc5\u586b"
+                })), e.ech === "custom" && y.a.createElement("div", {
+                    className: "form-group"
+                }, y.a.createElement("label", null, "ECH Key (\u670d\u52a1\u7aef\u79c1\u94a5)"), y.a.createElement(s["a"], {
+                    value: e.ech_key || "",
+                    onChange: e=>this.change("ech_key", e.target.value),
+                    placeholder: "\u7559\u7a7a\u81ea\u52a8\u751f\u6210"
+                })), e.ech === "custom" && y.a.createElement("div", {
+                    className: "form-group"
+                }, y.a.createElement("label", null, "ECH Config (\u5ba2\u6237\u7aef\u914d\u7f6e)"), y.a.createElement(s["a"], {
+                    value: e.ech_config || "",
+                    onChange: e=>this.change("ech_config", e.target.value),
+                    placeholder: "\u7559\u7a7a\u81ea\u52a8\u751f\u6210"
+                }))))
             }
         }
         class EncryptionSettings extends y.a.Component {
@@ -106292,11 +106344,11 @@
                     value: "vmess"
                 }, "VMess"))), e.protocol != null && e.protocol != "shadowsocks" && y.a.createElement("div", {
                     className: "form-group col-md-6 col-xs-12"
-                }, y.a.createElement("label", null, "\u5b89\u5168\u6027 ", (parseInt(e.tls) != 0 || e.protocol == "anytls" || e.protocol == "hysteria2" || e.protocol == "trojan" || e.protocol == "tuic") && y.a.createElement("a", {
+                }, y.a.createElement("label", null, "\u5b89\u5168\u6027 ", (parseInt(e.tls) != 0 || e.protocol == "hysteria2" || e.protocol == "trojan" || e.protocol == "tuic") && y.a.createElement("a", {
                     href: "javascript:void(0);",
                     onClick: ()=>this.showChildDrawer("\u7f16\u8f91\u5b89\u5168\u6027\u914d\u7f6e", "tls_settings")
                 }, "\u7f16\u8f91\u914d\u7f6e")), y.a.createElement(N["a"], {
-                    value: parseInt(e.tls) || (e.protocol == "anytls" || e.protocol == "hysteria2" || e.protocol == "trojan" || e.protocol == "tuic" ? 1 : 0),
+                    value: parseInt(e.tls) || (e.protocol == "hysteria2" || e.protocol == "trojan" || e.protocol == "tuic" ? 1 : 0),
                     style: {
                         width: "100%"
                     },
@@ -106307,7 +106359,7 @@
                 }, "\u65e0"), y.a.createElement(N["a"].Option, {
                     key: 1,
                     value: 1
-                }, "TLS"), e.protocol == "vless" && y.a.createElement(N["a"].Option, {
+                }, "TLS"), (e.protocol == "vless" || e.protocol == "anytls") && y.a.createElement(N["a"].Option, {
                     key: 2,
                     value: 2
                 }, "Reality")))), e.protocol == "shadowsocks" && y.a.createElement("div", {
@@ -106328,7 +106380,7 @@
                     value: "tcp"
                 }, "TCP"), y.a.createElement(N["a"].Option, {
                     value: "http"
-                }, "HTTP\u4f2a\u88c5")))), e.protocol != null && e.protocol != "hysteria2" && e.protocol != "anytls" && e.protocol != "shadowsocks" && e.protocol != "tuic" && y.a.createElement("div", {
+                }, "HTTP\u4f2a\u88c5")))), e.protocol != null && e.protocol != "hysteria2" && e.protocol != "shadowsocks" && e.protocol != "tuic" && y.a.createElement("div", {
                     className: "row"
                 }, y.a.createElement("div", {
                     className: "form-group col-md-12 col-xs-12"
@@ -106352,7 +106404,17 @@
                     value: "httpupgrade"
                 }, "HTTPUpgrade"), e.protocol != "trojan" && y.a.createElement(N["a"].Option, {
                     value: "xhttp"
-                }, "XHTTP")))), e.protocol == "anytls" && y.a.createElement("div", {
+                }, "XHTTP")))), e.network != null && (e.network == "xhttp" || e.network == "ws" || e.network == "grpc") && y.a.createElement("div", {
+                    className: "form-group"
+                }, y.a.createElement("label", null, "\u4fe1\u4efb\u7684XFF\u5934\u90e8(\u83b7\u53d6\u771f\u5b9eIP)"), y.a.createElement(N["a"], {
+                    mode: "tags",
+                    value: e.trusted_x_forwarded_for || [],
+                    style: {
+                        width: "100%"
+                    },
+                    placeholder: "\u5e38\u89c1\u5934\u90e8:X-Forwarded-For CF-Connecting-IP X-Real-IP",
+                    onChange: e=>this.formChange("trusted_x_forwarded_for", e.length > 0 ? e: null)
+                })), e.protocol == "anytls" && y.a.createElement("div", {
                     className: "row"
                 }, y.a.createElement("div", {
                     className: "form-group col-md-12 col-xs-12"
