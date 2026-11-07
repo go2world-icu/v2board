@@ -37,9 +37,7 @@ class SingboxOld
     {
         $defaultConfig = base_path('resources/rules/default.sing-box.old.json');
         $customConfig = base_path('resources/rules/custom.sing-box.old.json');
-        $jsonData = file_exists($customConfig) ? file_get_contents($customConfig) : file_get_contents($defaultConfig);
-
-        return json_decode($jsonData, true);
+        return \App\Services\RuleConfigService::json($defaultConfig, $customConfig);
     }
 
     protected function buildProxies()

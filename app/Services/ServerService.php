@@ -13,12 +13,15 @@ use App\Models\ServerVmess;
 use App\Models\ServerTrojan;
 use App\Models\ServerTuic;
 use App\Models\ServerAnytls;
+use App\Services\Concerns\CachesAvailableServers;
 use App\Utils\CacheKey;
 use App\Utils\Helper;
 use Illuminate\Support\Facades\Cache;
 
 class ServerService
 {
+    use CachesAvailableServers;
+
     public function getAvailableVless(User $user): array
     {
         $servers = [];
@@ -32,9 +35,9 @@ class ServerService
                 $server[$key]['port'] = Helper::randomPort($server[$key]['port']);
             }
             if ($server[$key]['parent_id']) {
-                $server[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_VLESS_LAST_CHECK_AT', $server[$key]['parent_id']));
+                $server[$key]['last_check_at'] = $this->serverHeartbeat('SERVER_VLESS_LAST_CHECK_AT', $v, $server[$key]['parent_id']);
             } else {
-                $server[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_VLESS_LAST_CHECK_AT', $server[$key]['id']));
+                $server[$key]['last_check_at'] = $this->serverHeartbeat('SERVER_VLESS_LAST_CHECK_AT', $v, $server[$key]['id']);
             }
             if (isset($server[$key]['tls_settings'])) {
                 $server[$key]['tls_settings'] = array_diff_key(
@@ -69,9 +72,9 @@ class ServerService
                 $vmess[$key]['port'] = Helper::randomPort($vmess[$key]['port']);
             }
             if ($vmess[$key]['parent_id']) {
-                $vmess[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_VMESS_LAST_CHECK_AT', $vmess[$key]['parent_id']));
+                $vmess[$key]['last_check_at'] = $this->serverHeartbeat('SERVER_VMESS_LAST_CHECK_AT', $v, $vmess[$key]['parent_id']);
             } else {
-                $vmess[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_VMESS_LAST_CHECK_AT', $vmess[$key]['id']));
+                $vmess[$key]['last_check_at'] = $this->serverHeartbeat('SERVER_VMESS_LAST_CHECK_AT', $v, $vmess[$key]['id']);
             }
             $servers[] = $vmess[$key]->toArray();
         }
@@ -93,9 +96,9 @@ class ServerService
                 $trojan[$key]['port'] = Helper::randomPort($trojan[$key]['port']);
             }
             if ($trojan[$key]['parent_id']) {
-                $trojan[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_TROJAN_LAST_CHECK_AT', $trojan[$key]['parent_id']));
+                $trojan[$key]['last_check_at'] = $this->serverHeartbeat('SERVER_TROJAN_LAST_CHECK_AT', $v, $trojan[$key]['parent_id']);
             } else {
-                $trojan[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_TROJAN_LAST_CHECK_AT', $trojan[$key]['id']));
+                $trojan[$key]['last_check_at'] = $this->serverHeartbeat('SERVER_TROJAN_LAST_CHECK_AT', $v, $trojan[$key]['id']);
             }
             $servers[] = $trojan[$key]->toArray();
         }
@@ -110,10 +113,10 @@ class ServerService
         foreach ($servers as $key => $v) {
             if (!$v['show']) continue;
             $servers[$key]['type'] = 'tuic';
-            $servers[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_TUIC_LAST_CHECK_AT', $v['id']));
+            $servers[$key]['last_check_at'] = $this->serverHeartbeat('SERVER_TUIC_LAST_CHECK_AT', $v, $v['id']);
             if (!in_array($user->group_id, $v['group_id'])) continue;
             if (isset($servers[$v['parent_id']])) {
-                $servers[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_TUIC_LAST_CHECK_AT', $v['parent_id']));
+                $servers[$key]['last_check_at'] = $this->serverHeartbeat('SERVER_TUIC_LAST_CHECK_AT', $v, $v['parent_id']);
                 $servers[$key]['created_at'] = $servers[$v['parent_id']]['created_at'];
             }
             $availableServers[] = $servers[$key]->toArray();
@@ -129,10 +132,10 @@ class ServerService
         foreach ($servers as $key => $v) {
             if (!$v['show']) continue;
             $servers[$key]['type'] = 'hysteria';
-            $servers[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_HYSTERIA_LAST_CHECK_AT', $v['id']));
+            $servers[$key]['last_check_at'] = $this->serverHeartbeat('SERVER_HYSTERIA_LAST_CHECK_AT', $v, $v['id']);
             if (!in_array($user->group_id, $v['group_id'])) continue;
             if (isset($servers[$v['parent_id']])) {
-                $servers[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_HYSTERIA_LAST_CHECK_AT', $v['parent_id']));
+                $servers[$key]['last_check_at'] = $this->serverHeartbeat('SERVER_HYSTERIA_LAST_CHECK_AT', $v, $v['parent_id']);
                 $servers[$key]['created_at'] = $servers[$v['parent_id']]['created_at'];
             }
             $servers[$key]['server_key'] = Helper::getServerKey($servers[$key]['created_at'], 16);
@@ -149,13 +152,13 @@ class ServerService
         foreach ($shadowsocks as $key => $v) {
             if (!$v['show']) continue;
             $shadowsocks[$key]['type'] = 'shadowsocks';
-            $shadowsocks[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_SHADOWSOCKS_LAST_CHECK_AT', $v['id']));
+            $shadowsocks[$key]['last_check_at'] = $this->serverHeartbeat('SERVER_SHADOWSOCKS_LAST_CHECK_AT', $v, $v['id']);
             if (!in_array($user->group_id, $v['group_id'])) continue;
             if (strpos($v['port'], '-') !== false) {
                 $shadowsocks[$key]['port'] = Helper::randomPort($v['port']);
             }
             if (isset($shadowsocks[$v['parent_id']])) {
-                $shadowsocks[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_SHADOWSOCKS_LAST_CHECK_AT', $v['parent_id']));
+                $shadowsocks[$key]['last_check_at'] = $this->serverHeartbeat('SERVER_SHADOWSOCKS_LAST_CHECK_AT', $v, $v['parent_id']);
                 $shadowsocks[$key]['created_at'] = $shadowsocks[$v['parent_id']]['created_at'];
             }
             if ($v['obfs'] === 'http') {
@@ -176,13 +179,13 @@ class ServerService
         foreach ($anytls as $key => $v) {
             if (!$v['show']) continue;
             $anytls[$key]['type'] = 'anytls';
-            $anytls[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_ANYTLS_LAST_CHECK_AT', $v['id']));
+            $anytls[$key]['last_check_at'] = $this->serverHeartbeat('SERVER_ANYTLS_LAST_CHECK_AT', $v, $v['id']);
             if (!in_array($user->group_id, $v['group_id'])) continue;
             if (strpos($v['port'], '-') !== false) {
                 $anytls[$key]['port'] = Helper::randomPort($v['port']);
             }
             if (isset($anytls[$v['parent_id']])) {
-                $anytls[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_ANYTLS_LAST_CHECK_AT', $v['parent_id']));
+                $anytls[$key]['last_check_at'] = $this->serverHeartbeat('SERVER_ANYTLS_LAST_CHECK_AT', $v, $v['parent_id']);
                 $anytls[$key]['created_at'] = $anytls[$v['parent_id']]['created_at'];
             }
             $servers[] = $anytls[$key]->toArray();
@@ -198,10 +201,10 @@ class ServerService
         foreach ($v2node as $key => $v) {
             if (!$v['show']) continue;
             $v2node[$key]['type'] = 'v2node';
-            $v2node[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_V2NODE_LAST_CHECK_AT', $v['id']));
+            $v2node[$key]['last_check_at'] = $this->serverHeartbeat('SERVER_V2NODE_LAST_CHECK_AT', $v, $v['id']);
             if (!in_array($user->group_id, $v['group_id'])) continue;
             if (isset($v2node[$v['parent_id']])) {
-                $v2node[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_V2NODE_LAST_CHECK_AT', $v['parent_id']));
+                $v2node[$key]['last_check_at'] = $this->serverHeartbeat('SERVER_V2NODE_LAST_CHECK_AT', $v, $v['parent_id']);
                 $v2node[$key]['created_at'] = $v2node[$v['parent_id']]['created_at'];
             }
             if (isset($v2node[$key]['tls_settings'])) {
@@ -224,6 +227,11 @@ class ServerService
 
     public function getAvailableServers(User $user)
     {
+        return $this->rememberAvailableServers($user);
+    }
+
+    private function loadAvailableServers(User $user): array
+    {
         $servers = array_merge(
             $this->getAvailableShadowsocks($user),
             $this->getAvailableVmess($user),
@@ -234,6 +242,7 @@ class ServerService
             $this->getAvailableAnyTLS($user),
             $this->getAvailableV2node($user)
         );
+        $servers = $this->loadServerHeartbeats($servers);
         $tmp = array_column($servers, 'sort');
         array_multisort($tmp, SORT_ASC, $servers);
         $servers = array_map(function ($server) {
@@ -242,12 +251,8 @@ class ServerService
             } else {
                 $server['port'] = (int)$server['port'];
             }
-            $server['is_online'] = (time() - 300 > $server['last_check_at']) ? 0 : 1;
-            $server['cache_key'] = "{$server['type']}-{$server['id']}-{$server['updated_at']}-{$server['is_online']}";
-            return $server;
+            return ServerCacheService::withHeartbeatStatus($server);
         }, $servers);
-        // 对 tags 含"优选"的节点，展开为全局优选IP池的克隆节点（换地址，SNI/传输保留）
-        PreferredNodeService::expand($servers);
         return $servers;
     }
 

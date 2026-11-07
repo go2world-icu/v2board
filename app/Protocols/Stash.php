@@ -28,11 +28,7 @@ class Stash
         // 暂时使用clash配置文件，后续根据Stash更新情况更新
         $defaultConfig = base_path() . '/resources/rules/default.stash.yaml';
         $customConfig = base_path() . '/resources/rules/custom.stash.yaml';
-        if (\File::exists($customConfig)) {
-            $config = Yaml::parseFile($customConfig);
-        } else {
-            $config = Yaml::parseFile($defaultConfig);
-        }
+        $config = \App\Services\RuleConfigService::yaml($defaultConfig, $customConfig);
         $proxy = [];
         $proxies = [];
 
